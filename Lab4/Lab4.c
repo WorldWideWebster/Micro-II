@@ -42,7 +42,7 @@ int fileHandleGPIO_7;
 int fileHandleGPIO_S;
 
 
-//****************OLD FUNCTION FROM LAB 2***************************
+
 //open GPIO and set the direction
 /*int openGPIO(int gpio, int direction )
 {
@@ -180,65 +180,101 @@ void openGPIO(int gpio, int direction )
 		
 }
 
-int readGPIO (int fileDirectory, char value, int size)
-{
 
-
-        read(fileDirectory, value, size);
-
-	int temp = value - '0';
-	return temp;
-}
+//****************OLD FUNCTION FROM LAB 2***************************
 //write values GPIO
-int writeGPIO(int fileDirectory, int value)
+/*int writeGPIO(int fileDirectory, int value)
 {
 	// previous way: cat /sys/class/gpio/gpio40/value
 
 
 	write(fileDirectory,value ,1);
 	return 0;
+}*/
+
+//write value
+void writeGPIO(int gpio, int value)
+{
+	// initialize system call string for setting the value
+	// value is a file that contains a string that is either "0" or "1"
+    char str_st1[50] = {};  // 50 = size of system() call
+	memset(str_st1,0,sizeof(str_st1));
+	
+	// write the first portion of the value system() call
+    if (value==HIGH) // if value is HIGH
+    {
+		strcat(str_st1,"echo -n \"1\" > /sys/class/gpio/");
+    }
+    else if (value==LOW) // if value is LOW
+    {
+		strcat(str_st1,"echo -n \"0\" > /sys/class/gpio/");
+    }
+	// switch on gpio and create value system commands
+	// writing to the value file requires the Linux GPIO
+    switch (gpio)
+    {
+		case Strobe:
+		strcat(str_st1,"gpio40/value\n");
+		system(str_st1);
+		break;
+        case GP_4:
+        strcat(str_st1,"gpio6/value\n");
+        system(str_st1);
+        break;
+        case GP_5:
+        strcat(str_st1,"gpio0/value\n");
+        system(str_st1);
+        break;
+        case GP_6:
+        strcat(str_st1,"gpio1/value\n");
+        system(str_st1);
+        break;
+        case GP_7:
+        strcat(str_st1,"gpio38/value\n");
+        system(str_st1);
+        break;
+    }
 }
 
 void send(int message)
 {
-	fileHandleGPIO_4 = openGPIO(GP_4, GPIO_DIRECTION_OUT);
-	fileHandleGPIO_5 = openGPIO(GP_5, GPIO_DIRECTION_OUT);
-	fileHandleGPIO_6 = openGPIO(GP_6, GPIO_DIRECTION_OUT);
-	fileHandleGPIO_7 = openGPIO(GP_7, GPIO_DIRECTION_OUT);
-	fileHandleGPIO_S = openGPIO(Strobe, GPIO_DIRECTION_OUT);
+	openGPIO(GP_4, GPIO_DIRECTION_OUT);
+	openGPIO(GP_5, GPIO_DIRECTION_OUT);
+	openGPIO(GP_6, GPIO_DIRECTION_OUT);
+	openGPIO(GP_7, GPIO_DIRECTION_OUT);
+	openGPIO(Strobe, GPIO_DIRECTION_OUT);
 	// **************1.Strobe high*************************
-	writeGPIO(fileHandleGPIO_S, 1);
+	writeGPIO(GP_S, 1);
 	// **************2.write data**************************
-	writeGPIO(fileHandleGPIO_4, (message && 0b0001));
-	writeGPIO(fileHandleGPIO_5, (message && 0b0010) >> 1);
-	writeGPIO(fileHandleGPIO_6, (message && 0b0100) >> 2);
-	writeGPIO(fileHandleGPIO_7, (message && 0b1000) >> 3);
+	writeGPIO(GP_4, (message && 0b0001));
+	writeGPIO(GP_5, (message && 0b0010) >> 1);
+	writeGPIO(GP_6, (message && 0b0100) >> 2);
+	writeGPIO(GP_7, (message && 0b1000) >> 3);
 	//***************3.Strobe low**************************
 	writeGPIO(fileHandleGPIO_S, 0);
 }
 char receive(void)
-
 {
 	int message = 0;
 	char currBit;
-	fileHandleGPIO_S = openGPIO(Strobe, GPIO_DIRECTION_OUT);
-	fileHandleGPIO_4 = openGPIO(GP_4, GPIO_DIRECTION_IN);
-	fileHandleGPIO_5 = openGPIO(GP_5, GPIO_DIRECTION_IN);
-	fileHandleGPIO_6 = openGPIO(GP_6, GPIO_DIRECTION_IN);
-	fileHandleGPIO_7 = openGPIO(GP_7, GPIO_DIRECTION_IN);
+	openGPIO(Strobe, GPIO_DIRECTION_OUT);
+	openGPIO(GP_4, GPIO_DIRECTION_IN);
+	openGPIO(GP_5, GPIO_DIRECTION_IN);
+	openGPIO(GP_6, GPIO_DIRECTION_IN);
+	openGPIO(GP_7, GPIO_DIRECTION_IN);
 	// **************1.Strobe high*************************
-	writeGPIO(fileHandleGPIO_S, 1);
+	writeGPIO(GP_S, 1);
 	// **************2.read data***************************
-	readGPIO(fileHandleGPIO_4, currBit, 1);
+	currBit = system("cat /sys/class/gpio/gpio6/value");
 	message = message << 1;
 	message |= currBit;
-	readGPIO(fileHandleGPIO_5, currBit, 1);
+	currBit = system("cat /sys/class/gpio/gpio0/value");
 	message = message << 1;
 	message |= currBit;
-	readGPIO(fileHandleGPIO_6, currBit, 1);
+	currBit = system("cat /sys/class/gpio/gpio1/value");
 	message = message << 1;
 	message |= currBit;
-	readGPIO(fileHandleGPIO_7, currBit, 1);
+	currBit = system("cat /sys/class/gpio/gpio38/value");
 	message = message << 1;
 	message |= currBit;
 	
