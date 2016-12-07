@@ -16,7 +16,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
-#include "Lab4_PicComs.h"
+
 
 /* user commands */
 #define MSG_RESET	0x0	// reset the sensor to the intitial state
@@ -177,65 +177,86 @@ void send(int message)
 	openGPIO(GP_6, GPIO_DIRECTION_OUT);
 	openGPIO(GP_7, GPIO_DIRECTION_OUT);
 	openGPIO(Strobe, GPIO_DIRECTION_OUT);
+	// **************1a.Strobe Low*************************
+	usleep(1000);
+	writeGPIO(Strobe, 0);
+	usleep(1000);
+	// **************2.write data**************************	
+	printf("message = %d\n", message);
+	writeGPIO(GP_4, (message & 0b0001));
+	usleep(1000);
+	writeGPIO(GP_5, (message & 0b0010) >> 1);
+	usleep(1000);
+	writeGPIO(GP_6, (message & 0b0100) >> 2);
+	usleep(1000);
+	writeGPIO(GP_7, (message & 0b1000) >> 3);
+	usleep(10000);
 	// **************1.Strobe high*************************
 	writeGPIO(Strobe, 1);
 	usleep(1000);
-	// **************2.write data**************************
-	printf("message = %d\n", message);
-	writeGPIO(GP_4, (message && 0b0001));
-	system("cat /sys/class/gpio/gpio6/value");
-	writeGPIO(GP_5, (message && 0b0010) >> 1);
-	system("cat /sys/class/gpio/gpio0/value");
-	writeGPIO(GP_6, (message && 0b0100) >> 2);
-	system("cat /sys/class/gpio/gpio1/value");
-	writeGPIO(GP_7, (message && 0b1000) >> 3);
-	system("cat /sys/class/gpio/gpio38/value");
-	//***************3.Strobe low**************************
-	usleep(1000);
+	// **************1a.Strobe Low*************************
 	writeGPIO(Strobe, 0);
+	usleep(1000);
 }
 int receive(void)
 {
 	FILE *output;
 	int message = 0;
-	char buff;
-	int currBit;
+	unsigned char buff;
+	unsigned char currBit;
 	openGPIO(Strobe, GPIO_DIRECTION_OUT);
 	openGPIO(GP_4, GPIO_DIRECTION_IN);
 	openGPIO(GP_5, GPIO_DIRECTION_IN);
 	openGPIO(GP_6, GPIO_DIRECTION_IN);
 	openGPIO(GP_7, GPIO_DIRECTION_IN);
 	// **************1.Strobe high*************************
+	usleep(1000);
 	writeGPIO(Strobe, 1);
 	usleep(10000);
 	// **************2.read data***************************
 	output = popen("cat /sys/class/gpio/gpio6/value", "r");
+	system("cat /sys/class/gpio/gpio6/value");
 	buff = fgetc(output);
 	currBit = atoi(&buff);
-	pclose(output);
-	message = message << 1;
+	printf("CurrBit: %d\n", currBit);
+	
 	message |= currBit;
+	usleep(1000);
+	//pclose(output);
 	output = popen("cat /sys/class/gpio/gpio0/value", "r");
+	system("cat /sys/class/gpio/gpio0/value");
 	buff = fgetc(output);
 	currBit = atoi(&buff);
-	pclose(output);
-	message = message << 1;
-	message |= currBit;
-	output = popen("cat /sys/class/gpio/gpio1/value", "r");
-	buff = fgetc(output);
-	currBit = atoi(&buff);
-	pclose(output);
-	message = message << 1;
-	message |= currBit;
-	output = popen("cat /sys/class/gpio/gpio38/value", "r");	
-	buff = fgetc(output);
-	currBit = atoi(&buff);
-	pclose(output);
+	printf("CurrBit: %d\n", currBit);
+	
 	message = message << 1;
 	message |= currBit;
 	usleep(1000);
+	//pclose(output);
+	output = popen("cat /sys/class/gpio/gpio1/value", "r");
+	system("cat /sys/class/gpio/gpio1/value");
+	buff = fgetc(output);
+	currBit = atoi(&buff);
+	printf("CurrBit: %d\n", currBit);
+	
+	message = message << 1;
+	message |= currBit;
+	//pclose(output);
+	usleep(1000);
+	output = popen("cat /sys/class/gpio/gpio38/value", "r");
+	system("cat /sys/class/gpio/gpio38/value");
+	buff = fgetc(output);
+	currBit = atoi(&buff);
+	printf("CurrBit: %d\n", currBit);
+	
+	message = message << 1;
+	message |= currBit;
+	//pclose(output);
+	usleep(1000);
+	
 	//***************3.Strobe low**************************
 	writeGPIO(Strobe, 0);
+	usleep(1000);
 	return message;
 }
 
@@ -271,8 +292,9 @@ int main(void)
 			send(msg);
 			usleep(1000);
 			if(receive() != MSG_ACK)
-
-				printf("error: no ack\n");
+				printf("error: no ack\n");	
+			else
+				printf("ACK received!\n");
 			break;
 		case 'p' :
 			printf("pinging\n");
@@ -283,22 +305,37 @@ int main(void)
 			printf("response: %x\n", temp);
 			if(temp != MSG_ACK)
 				printf("error: no ack\n");
+			else
+				printf("ACK received!\n");
 			break;
 		case 'g' :
 			printf("getting\n");
 			msg = 0x2;
 			send(msg);
 			int i;
+			value = 0;
+			if(receive() != MSG_ACK)
+			{
+				printf("error: no ack\n");
+				break;
+			}
+			else
+				printf("ACK received!\n");
 			for(i = 0; i < 3; i++)
 			{
 				usleep(1000);
 				temp = receive();
-				value = value << 4;
-				value |= temp;
+				if(i == 0)
+					value = (temp & 0b11) << 2;
+				else
+				{
+					value = value << 4;
+					value |= temp;
+				}
 			}
+			printf("Value: %d\n", value);
 			usleep(1000);
-			if(receive() != MSG_ACK)
-				printf("error: no ack\n");
+			
 			break;
 			break;
 		case 'q' :
