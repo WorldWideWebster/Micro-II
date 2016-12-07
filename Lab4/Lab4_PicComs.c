@@ -10,32 +10,18 @@
  * Created on 2014/9/13
  * Code from class example and from black-swift.com used
  */
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
+#ifndef
+	#include <stdlib.h>
+	#include <stdio.h>
+	#include <fcntl.h>
+	#include <unistd.h>
+	#include <string.h>
+#endif
 #include "Lab4_PicComs.h"
 
-/* user commands */
-#define MSG_RESET	0x0	// reset the sensor to the intitial state
-#define MSG_PING	0x1	// check if the sensor is working properly
-#define MSG_GET		0x2	// obtain the most recent ADC result
 
-#define MSG_ACK		0xE	// ack message obtained from pic
 
-#define LOW 0
-#define HIGH 1
 
-#define Strobe     (40) // IO8
-#define GP_4       (6) // IO4
-#define GP_5	   (0) // IO5
-#define GP_6	   (1) // IO6
-#define GP_7	   (38) // IO7
-#define GPIO_DIRECTION_IN      (1)  
-#define GPIO_DIRECTION_OUT     (0)
-#define ERROR                  (-1)
 
 
 //open GPIO and set the direction
@@ -238,92 +224,3 @@ int receive(void)
 	writeGPIO(Strobe, 0);
 	return message;
 }
-
-//main
-int main(void)
-{
-	
-	setGPIO(40, 1);
-	setGPIO(6, 1);
-	setGPIO(0, 1);
-	setGPIO(38, 1);
-	setGPIO(1, 1);
-	setGPIO(20, 1);
-	setGPIO(18, 1);
-	setGPIO(36, 1);
-	
-	
-	int value;
-	unsigned char msg;
-	unsigned char temp;
-	char cmd;
-	
-	while(1)
-	{
-		printf("enter a command: ");
-		scanf("%c", &cmd);
-
-		switch (cmd) {
-
-		case 'r' :
-			printf("resetting\n");
-			msg = 0x0;
-			send(msg);
-			usleep(1000);
-			if(receive() != MSG_ACK)
-
-				printf("error: no ack\n");
-			break;
-		case 'p' :
-			printf("pinging\n");
-			msg = 0x1;
-			send(msg);
-			sleep(1);
-			temp = receive();
-			printf("response: %x\n", temp);
-			if(temp != MSG_ACK)
-				printf("error: no ack\n");
-			break;
-		case 'g' :
-			printf("getting\n");
-			msg = 0x2;
-			send(msg);
-			int i;
-			for(i = 0; i < 3; i++)
-			{
-				usleep(1000);
-				temp = receive();
-				value = value << 4;
-				value |= temp;
-			}
-			usleep(1000);
-			if(receive() != MSG_ACK)
-				printf("error: no ack\n");
-			break;
-			break;
-		case 'q' :
-			printf("quitting\n");
-			return;
-		default : printf("command not recognized\n");
-		}
-
-	
-	}
-	return 0;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
