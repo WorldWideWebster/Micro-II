@@ -43,7 +43,6 @@ void setGPIO(int gpio, int direction )
 {
 	char buffer[256];
 
-	
     //*******************1.set the GPIO************************
 	printf("thisworks1\n");
 	sprintf(buffer, "echo -n \"%d\" > /sys/class/gpio/export", gpio);
